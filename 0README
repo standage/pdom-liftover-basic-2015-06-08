@@ -1,0 +1,53 @@
+#!/usr/bin/make -f
+
+LNXPFX=http://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64
+MACPFX=http://hgdownload.cse.ucsc.edu/admin/exe/macOSX.x86_64
+
+REF=pdom-scaffolds-masked-r1.2.fa.2bit
+NEW=pdom-scaffolds-masked-mar2015.fa.2bit
+
+all: pdom-r1.2_to_mar2015.liftOver
+
+pdom-r1.2_to_mar2015.liftOver: net/all.net all.chain
+	netChainSubset $^ > $@
+
+net/all.net: all.sorted.chain r1.2.chromInfo mar2015.chromInfo
+	chainNet $^ $@ /dev/null
+
+%.chromInfo: pdom-scaffolds-masked-%.fa.2bit
+	twoBitInfo $^ $@
+
+all.chain: chainMergeSortDone
+	cat chainMerge/*.chain > $@
+
+all.sorted.chain: all.chain
+	chainSort $^ $@
+
+chainMergeSortDone: pdom-r1.2_to_mar2015.chain
+	mkdir -p chainMerge
+	chainMergeSort pdom-r1.2_to_mar2015.chain | chainSplit chainMerge stdin -lump=50
+	touch $@
+
+pdom-r1.2_to_mar2015.chain: pdom-r1.2_to_mar2015.psl $(REF) $(NEW)
+	axtChain -linearGap=medium -psl $^ $@
+
+pdom-r1.2_to_mar2015.psl: $(REF) $(NEW)
+	time blat $^ -tileSize=12 -fastMap -minIdentity=95 $@ -noHead -minScore=100
+
+get-linux:
+	wget $(LNXPFX)/blat/blat && chmod 755 blat
+	wget $(LNXPFX)/axtChain && chmod 755 axtChain
+	wget $(LNXPFX)/chainMergeSort && chmod 755 chainMergeSort
+	wget $(LNXPFX)/chainSort && chmod 755 chainSort
+	wget $(LNXPFX)/twoBitInfo && chmod 755 twoBitInfo
+	wget $(LNXPFX)/chainNet && chmod 755 chainNet
+	wget $(LNXPFX)/netChainSubset && chmod 755 netChainSubset
+
+get-mac:
+	wget $(MACPFX)/blat/blat && chmod 755 blat
+	wget $(MACPFX)/axtChain && chmod 755 axtChain
+	wget $(MACPFX)/chainMergeSort && chmod 755 chainMergeSort
+	wget $(MACPFX)/chainSort && chmod 755 chainSort
+	wget $(MACPFX)/twoBitInfo && chmod 755 twoBitInfo
+	wget $(MACPFX)/chainNet && chmod 755 chainNet
+	wget $(MACPFX)/netChainSubset && chmod 755 netChainSubset
